@@ -4,7 +4,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import type { Seeder } from './types';
-import { Prisma } from '../../generated/prisma/client';
 
 export const stateSeeder: Seeder = {
    name: 'state',
@@ -18,8 +17,8 @@ export const stateSeeder: Seeder = {
          where: { incubator_id: incId },
          update: {
             mode: 'AUTO',
-            current_temp_c: new Prisma.Decimal('36.5'),
-            current_rh_percent: new Prisma.Decimal('55.0'),
+            current_temp_c: 0,
+            current_rh_percent: 0,
             fan: [0,0,0,0,0,0],
             lamp: [1,1],
             rev: BigInt(1),
@@ -31,8 +30,8 @@ export const stateSeeder: Seeder = {
          create: {
             incubator_id: incId,
             mode: 'AUTO',
-            current_temp_c: new Prisma.Decimal('36.5'),
-            current_rh_percent: new Prisma.Decimal('55.0'),
+            current_temp_c: 0,
+            current_rh_percent: 0,
             fan: [0,0,0,0,0,0],
             lamp: [1,1],
             rev: BigInt(1),

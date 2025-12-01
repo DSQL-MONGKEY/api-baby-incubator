@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 
-import { prisma } from 'lib/prisma';
+import { prisma } from 'src/lib/prisma';
 import { seeders } from './seeders';
 import type { SeedContext } from './seeders/types';
 

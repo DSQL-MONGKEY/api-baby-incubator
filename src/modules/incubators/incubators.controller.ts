@@ -1,34 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Put } from '@nestjs/common';
 import { IncubatorsService } from './incubators.service';
-import { CreateIncubatorDto } from './dto/create-incubator.dto';
-import { UpdateIncubatorDto } from './dto/update-incubator.dto';
+import { UpdateModeDto } from './dto/update-mode.dto';
+import { UpdateFanDto } from './dto/update-fan.dto';
+import { UpdateLampDto } from './dto/update-lamp.dto';
+import { UpdateSensorParamsDto } from './dto/update-sensor-params.dto';
+import { IncubatorId } from 'src/common/decorators/incubator-id.decorator';
 
 @Controller('incubators')
 export class IncubatorsController {
-  constructor(private readonly incubatorsService: IncubatorsService) {}
+  constructor(private readonly svc: IncubatorsService) {}
 
-  @Post()
-  create(@Body() createIncubatorDto: CreateIncubatorDto) {
-    return this.incubatorsService.create(createIncubatorDto);
-  }
-
+  // list & detail
   @Get()
-  findAll() {
-    return this.incubatorsService.findAll();
-  }
+  list() { return this.svc.list(); }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.incubatorsService.findOne(+id);
+  detail(@Param('id') id: string) { return this.svc.getById(id); }
+
+  // state
+  @Get(':id/state')
+  state(@Param('id') id: string) { return this.svc.getState(id); }
+
+  // control
+  @Patch(':id/mode')
+  setMode(@Param('id') id: string, @Body() dto: UpdateModeDto) {
+    return this.svc.setMode(id, dto.mode as any);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateIncubatorDto: UpdateIncubatorDto) {
-    return this.incubatorsService.update(+id, updateIncubatorDto);
+  @Patch(':id/fan')
+  setFan(@IncubatorId() id: string, @Body() dto: UpdateFanDto) {
+    return this.svc.setFanManual(id, dto.fan);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.incubatorsService.remove(+id);
+  @Patch(':id/lamp')
+  setLamp(@IncubatorId() id: string, @Body() dto: UpdateLampDto) {
+    return this.svc.setLampManual(id, dto.lamp);
+  }
+
+  // params
+  @Get(':id/params')
+  getParams(@Param('id') id: string) { return this.svc.getParams(id); }
+
+  @Put(':id/params')
+  putParams(@Param('id') id: string, @Body() dto: UpdateSensorParamsDto) {
+    return this.svc.upsertParams(id, dto);
   }
 }

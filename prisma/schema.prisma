@@ -1,20 +1,178 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+model incubator {
+  id              String                @id @default(uuid())
+  code            String                @unique
+  name            String
+  status          incubator_status      @default(OFFLINE)
+  mode            device_mode           @default(AUTO)
+  fwVersion       String?
+  location_label  String?
+  last_seen_at    DateTime?
+  last_session_id String?
+  created_at      DateTime              @default(now())
+  commands        command[]
+  last_session    incubator_session?    @relation("incubator_last_session", fields: [last_session_id], references: [id])
+  sessions        incubator_session[]
+  sensor_param    sensor_parameters?
+  state           state?
+  telemetry       telemetry[]
+  activations     template_activation[]
+  template        templates[]
+}
 
-// ENUMS
+model users {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String
+  role       String?
+  created_at DateTime @default(now())
+}
+
+model baby_users {
+  id         String              @id @default(uuid())
+  name       String
+  dob        DateTime?
+  medical_id String?
+  notes      String?
+  created_at DateTime            @default(now())
+  sessions   incubator_session[]
+}
+
+model incubator_session {
+  id           String      @id @default(uuid())
+  incubator_id String
+  baby_id      String
+  started_at   DateTime
+  ended_at     DateTime?
+  notes        String?
+  created_at   DateTime    @default(now())
+  incubators   incubator[] @relation("incubator_last_session")
+  baby         baby_users  @relation(fields: [baby_id], references: [id], onDelete: Cascade)
+  incubator    incubator   @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+  states       state[]
+
+  @@index([incubator_id, started_at])
+}
+
+model sensor_parameters {
+  id             String    @id @default(uuid())
+  incubator_id   String    @unique
+  temp_on_c      Float     @default(36.70)
+  temp_off_c     Float     @default(36.30)
+  rh_on_percent  Float     @default(60.00)
+  rh_off_percent Float     @default(50.00)
+  ema_alpha      Float     @default(0.20)
+  min_on_ms      Int?
+  min_off_ms     Int?
+  anti_chatter   Boolean?  @default(true)
+  updated_at     DateTime  @updatedAt
+  created_at     DateTime  @default(now())
+  incubator      incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+}
+
+model templates {
+  id           String                @id @default(uuid())
+  incubator_id String
+  name         String
+  description  String?
+  fan          Int[]
+  lamp         Int[]
+  isArchived   Boolean               @default(false)
+  created_by   String?
+  created_at   DateTime              @default(now())
+  updated_at   DateTime              @updatedAt
+  activations  template_activation[]
+  incubator    incubator             @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+
+  @@unique([incubator_id, name])
+}
+
+model template_activation {
+  id             String            @id @default(uuid())
+  incubator_id   String
+  template_id    String?
+  requested_by   String?
+  correlation_id String?
+  result         activation_result
+  applied_mode   device_mode
+  applied_lamp   Int[]
+  applied_fan    Int[]
+  created_at     DateTime          @default(now())
+  incubator      incubator         @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+  template       templates?        @relation(fields: [template_id], references: [id])
+
+  @@index([incubator_id, created_at(sort: Desc)], map: "template_activation_incubator_createdat_idx")
+}
+
+model telemetry {
+  id           BigInt      @id @default(autoincrement())
+  incubator_id String
+  ts           DateTime
+  temp_ds      Float?
+  temp_dht     Float?
+  temp_main    Float?
+  room_humid   Float?
+  mode         device_mode
+  fan          Int[]
+  lamp         Int[]
+  gpsFix       Boolean?
+  gpsSat       Int?
+  gpsLat       Float?
+  gpsLon       Float?
+  rev          BigInt?
+  fwVersion    String?
+  raw          Json?
+  created_at   DateTime    @default(now())
+  incubator    incubator   @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+
+  @@index([incubator_id, ts(sort: Desc)], map: "telemetry_incubator_ts_idx")
+}
+
+model state {
+  incubator_id       String             @id
+  mode               device_mode
+  current_temp_c     Float?
+  current_rh_percent Float?
+  fan                Int[]
+  lamp               Int[]
+  rev                BigInt             @default(6)
+  fwVersion          String?
+  gpsFix             Boolean?
+  gpsSat             Int?
+  gpsLat             Float?
+  gpsLon             Float?
+  gpsAlt             Float?
+  active_session_id  String?
+  updated_at         DateTime           @default(now())
+  active_session     incubator_session? @relation(fields: [active_session_id], references: [id])
+  incubator          incubator          @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+}
+
+model command {
+  id             BigInt    @id @default(autoincrement())
+  incubator_id   String
+  ts             DateTime
+  cmd_type       String
+  payload        Json
+  qos            Int?
+  published_by   String?
+  correlation_id String?
+  ack_ok         Boolean?
+  ack_msg        String?
+  ack_at         DateTime?
+  created_at     DateTime  @default(now())
+  incubator      incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
+
+  @@index([incubator_id, created_at(sort: Desc)], map: "command_incubator_created_idx")
+}
+
 enum device_mode {
   AUTO
   MANUAL
@@ -30,206 +188,4 @@ enum activation_result {
   APPLIED
   PARTIAL
   FAILED
-}
-
-// Core Models
-
-model incubator {
-  id String @id @default(uuid())
-  code String @unique
-  name String
-  status incubator_status @default(OFFLINE)
-  mode device_mode @default(AUTO)
-  fwVersion String?
-  location_label String?
-  last_seen_at DateTime?
-
-  last_session_id String?
-  last_session incubator_session? @relation("incubator_last_session", fields: [last_session_id], references: [id], onDelete: SetNull)
-
-  sessions incubator_session[]
-  sensor_param sensor_parameters?
-  template templates[]
-  state state?
-  telemetry telemetry[]
-  commands command[]
-  activations template_activation[]
-
-  created_at DateTime @default(now())
-}
-
-model users {
-  id String @id @default(uuid())
-  email String @unique
-  name String
-  role String?
-  created_at DateTime @default(now())
-}
-
-model baby_users {
-  id String @id @default(uuid())
-  name String
-  dob DateTime?
-  medical_id String?
-  notes String?
-  created_at DateTime @default(now())
-
-  sessions incubator_session[]
-}
-
-model incubator_session {
-  id String @id @default(uuid())
-  incubator_id String
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  baby_id String
-  baby baby_users @relation(fields: [baby_id], references: [id], onDelete: Cascade)
-
-  started_at DateTime
-  ended_at DateTime?
-  notes String?
-
-  created_at DateTime @default(now())
-
-  @@index([incubator_id, started_at])
-  incubators incubator[] @relation("incubator_last_session")
-  states state[]
-}
-
-model sensor_parameters {
-  id String @id @default(uuid())
-  incubator_id String @unique
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  temp_on_c Float @default(36.70) 
-  temp_off_c Float @default(36.30)
-  rh_on_percent Float @default(60.00)
-  rh_off_percent Float @default(50.00)
-  ema_alpha Float @default(0.20)
-
-  min_on_ms Int?
-  min_off_ms Int?
-  anti_chatter Boolean? @default(true)
-
-  updated_at DateTime @updatedAt
-  created_at DateTime @default(now())
-}
-
-model templates {
-  id String @id @default(uuid())
-  incubator_id String
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  name String
-  description String?
-
-  fan Int[]
-  lamp Int[]
-
-  isArchived Boolean @default(false)
-  created_by String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  activations template_activation[]
-
-  @@unique([incubator_id, name])
-}
-
-model template_activation {
-  id String @id @default(uuid())
-  incubator_id String
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  template_id String?
-  template templates? @relation(fields: [template_id], references: [id], onDelete: SetNull)
-
-  requested_by String?
-  correlation_id String?
-  result activation_result
-
-  applied_mode device_mode // must be MANUAL while applying the template
-  applied_lamp Int[]
-  applied_fan Int[]
-
-  created_at DateTime @default(now())
-
-  @@index([incubator_id, created_at(sort: Desc)], name: "template_activation_incubator_createdat_idx")
-}
-
-model telemetry {
-  id BigInt @id @default(autoincrement())
-  incubator_id String
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  ts DateTime
-
-  temp_ds Float?
-  temp_dht Float?
-  temp_main Float?
-  room_humid Float?
-  
-  mode device_mode
-  fan Int[]
-  lamp Int[]
-
-  gpsFix Boolean?
-  gpsSat Int?
-  gpsLat Float?
-  gpsLon Float?
-
-  rev BigInt?
-  fwVersion String?
-  raw Json?
-  created_at DateTime @default(now())
-
-  @@index([incubator_id, ts(sort: Desc)], name: "telemetry_incubator_ts_idx")
-}
-
-// Snapshot current incubator state
-model state {
-  incubator_id String @id
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  mode device_mode
-
-  current_temp_c Decimal @db.Decimal(5,2)
-  current_rh_percent Decimal @db.Decimal(5,2)
-
-  fan Int[]
-  lamp Int[]
-  rev BigInt @default(6)
-  fwVersion String?
-
-  gpsFix Boolean?
-  gpsSat Int?
-  gpsLat Float?
-  gpsLon Float?
-  gpsAlt Float?
-
-  active_session_id String?
-  active_session incubator_session? @relation(fields: [active_session_id], references: [id], onDelete: SetNull)
-  updated_at DateTime @default(now())
-}
-
-model command {
-  id BigInt @id @default(autoincrement())
-  incubator_id String
-  incubator incubator @relation(fields: [incubator_id], references: [id], onDelete: Cascade)
-
-  ts DateTime
-
-  cmd_type String // control-mode | fan | lamp | apply-template
-  payload Json
-  qos Int?
-  published_by String?
-  correlation_id String?
-
-  ack_ok Boolean?
-  ack_msg String?
-  ack_at DateTime?
-
-  created_at DateTime @default(now())
-
-  @@index([incubator_id, created_at(sort: Desc)], name: "command_incubator_created_idx")
 }

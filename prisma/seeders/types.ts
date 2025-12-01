@@ -1,4 +1,4 @@
-import type { PrismaClient } from '../../generated/prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 export interface SeedContext {
   get<T = any>(key: string): T | undefined;

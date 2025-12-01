@@ -1,34 +1,37 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { TelemetryService } from './telemetry.service';
-import { CreateTelemetryDto } from './dto/create-telemetry.dto';
-import { UpdateTelemetryDto } from './dto/update-telemetry.dto';
 
-@Controller('telemetry')
+@Controller('incubators/:incubatorId/telemetry')
 export class TelemetryController {
-  constructor(private readonly telemetryService: TelemetryService) {}
+  constructor(private readonly svc: TelemetryService) {}
 
-  @Post()
-  create(@Body() createTelemetryDto: CreateTelemetryDto) {
-    return this.telemetryService.create(createTelemetryDto);
+  @Get('latest')
+  latest(@Param('incubatorId', new ParseUUIDPipe()) incubatorId: string) {
+    return this.svc.latest(incubatorId);
   }
 
   @Get()
-  findAll() {
-    return this.telemetryService.findAll();
+  list(
+    @Param('incubatorId', new ParseUUIDPipe()) incubatorId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('limit') limit?: string,
+    @Query('order') order?: 'asc' | 'desc',
+  ) {
+    return this.svc.listRaw(incubatorId, {
+      from, to,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      order: order ?? 'desc',
+    });
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.telemetryService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTelemetryDto: UpdateTelemetryDto) {
-    return this.telemetryService.update(+id, updateTelemetryDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.telemetryService.remove(+id);
+  @Get('series')
+  series(
+    @Param('incubatorId', new ParseUUIDPipe()) incubatorId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('bucket') bucket?: string, // detik (default 60)
+  ) {
+    return this.svc.series(incubatorId, { from, to, bucket });
   }
 }
