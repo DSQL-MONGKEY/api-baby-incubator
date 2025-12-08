@@ -61,8 +61,33 @@ export class IncubatorsService {
 
   list() {
     return this.db.incubator.findMany({
-      orderBy: { created_at: 'desc' },
+      orderBy: { created_at: 'asc' },
       select: { id: true, code: true, name: true, status: true, mode: true, fwVersion: true, last_seen_at: true },
+    });
+  }
+
+  async addNew(dto: {
+    incubatorCode: string,
+    name: string,
+    status: $Enums.incubator_status,
+    mode: $Enums.device_mode,
+    locationLabel: string,
+    fwVersion?: string,
+  }) {
+    if (dto.incubatorCode.length < 1) {
+      throw new BadRequestException('Incubator code length must be more than 1 character');
+    }
+
+    return this.db.incubator.create({
+      data: {
+        code: dto.incubatorCode,
+        name: dto.name,
+        status: dto.status,
+        mode: dto.mode,
+        location_label: dto.locationLabel,
+        fwVersion: dto.fwVersion ?? 'iot-byin@1.0.0',
+        last_seen_at:  new Date()
+      }
     });
   }
 

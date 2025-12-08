@@ -6,28 +6,28 @@ import { MqttService } from 'src/infra/mqtt/mqtt.service';
 import { PrismaService } from 'src/infra/prisma/prisma.service';
 
 type TelemetryMsg = {
-  v?: number;
-  ts?: number | string;
-  t?: { ds?: number | null; dht?: number | null; main?: number | null };
-  rh?: number | null;
-  fan?: number[];              // [0|1, x6]
-  mode?: 'AUTO' | 'MANUAL' | 'FORCE_ON' | 'FORCE_OFF';
-  lamp?: number[];             // [0|1, x2]
-  gps?: { fix?: boolean; sat?: number | null; lat?: number | null; lon?: number | null };
-  rev?: number;
-  fw?: string;
-  raw?: any;
+   v?: number;
+   ts?: number | string;
+   t?: { ds?: number | null; dht?: number | null; main?: number | null };
+   rh?: number | null;
+   fan?: number[];              // [0|1, x6]
+   mode?: 'AUTO' | 'MANUAL' | 'FORCE_ON' | 'FORCE_OFF';
+   lamp?: number[];             // [0|1, x2]
+   gps?: { fix?: boolean; sat?: number | null; lat?: number | null; lon?: number | null };
+   rev?: number;
+   fw?: string;
+   raw?: any;
 };
 
 function toDate(ts?: number | string): Date {
-  if (ts === undefined || ts === null) return new Date();
-  if (typeof ts === 'number') {
-    // asumsikan detik dari millis()/1000
-    return new Date(ts * 1000);
-  }
-  // ISO string
-  const d = new Date(ts);
-  return isNaN(d.getTime()) ? new Date() : d;
+   if (ts === undefined || ts === null) return new Date();
+   if (typeof ts === 'number') {
+      // asumsikan detik dari millis()/1000
+      return new Date(ts * 1000);
+   }
+   // ISO string
+   const d = new Date(ts);
+   return isNaN(d.getTime()) ? new Date() : d;
 }
 
 @Injectable()
@@ -77,7 +77,7 @@ export class TelemetryIngestService implements OnModuleInit {
          return;
       }
 
-      const ts = toDate(msg.ts);
+      const ts = new Date();
       // siapkan nilai numerik
       const temp_ds   = msg.t?.ds ?? null;
       const temp_dht  = msg.t?.dht ?? null;

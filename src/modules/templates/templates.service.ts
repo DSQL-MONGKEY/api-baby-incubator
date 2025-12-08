@@ -95,12 +95,11 @@ export class TemplatesService {
     }
   }
 
-  async archive(incubatorId: string, templateId: string) {
+  async delete(incubatorId: string, templateId: string) {
     await this.ensureIncubator(incubatorId);
     const existing = await this.get(incubatorId, templateId);
-    return this.db.templates.update({
+    return this.db.templates.delete({
       where: { id: existing.id },
-      data: { isArchived: true },
     });
   }
 

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { IncubatorsService } from './incubators.service';
 import { UpdateModeDto } from './dto/update-mode.dto';
 import { UpdateFanDto } from './dto/update-fan.dto';
 import { UpdateLampDto } from './dto/update-lamp.dto';
 import { UpdateSensorParamsDto } from './dto/update-sensor-params.dto';
 import { IncubatorId } from 'src/common/decorators/incubator-id.decorator';
+import { CreateIncubatorDto } from './dto/create-incubator.dto';
 
 @Controller('incubators')
 export class IncubatorsController {
@@ -13,6 +14,11 @@ export class IncubatorsController {
   // list & detail
   @Get()
   list() { return this.svc.list(); }
+
+  @Post()
+  addNewIncubator(@Body() dto: CreateIncubatorDto) {
+    return this.svc.addNew(dto);
+  }
 
   @Get(':id')
   detail(@Param('id') id: string) { return this.svc.getById(id); }

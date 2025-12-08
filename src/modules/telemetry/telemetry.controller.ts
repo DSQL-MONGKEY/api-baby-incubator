@@ -20,7 +20,7 @@ export class TelemetryController {
   ) {
     return this.svc.listRaw(incubatorId, {
       from, to,
-      limit: limit ? parseInt(limit, 10) : undefined,
+    limit: limit ? parseInt(limit, 10) : undefined,
       order: order ?? 'desc',
     });
   }

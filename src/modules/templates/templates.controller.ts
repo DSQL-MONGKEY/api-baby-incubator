@@ -43,11 +43,11 @@ export class TemplatesController {
   }
 
   @Delete(':templateId')
-  archive(
+  delete(
     @Param('incubatorId', new ParseUUIDPipe()) incubatorId: string,
     @Param('templateId', new ParseUUIDPipe()) templateId: string,
   ) {
-    return this.svc.archive(incubatorId, templateId);
+    return this.svc.delete(incubatorId, templateId);
   }
 
   @Post(':templateId/apply')
