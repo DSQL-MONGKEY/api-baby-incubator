@@ -47,8 +47,8 @@ export class IncubatorsController {
   @Get(':id/params')
   getParams(@Param('id') id: string) { return this.svc.getParams(id); }
 
-  @Put(':id/params')
-  putParams(@Param('id') id: string, @Body() dto: UpdateSensorParamsDto) {
+  @Patch(':id/params')
+  pacthParams(@Param('id') id: string, @Body() dto: UpdateSensorParamsDto) {
     return this.svc.upsertParams(id, dto);
   }
 }

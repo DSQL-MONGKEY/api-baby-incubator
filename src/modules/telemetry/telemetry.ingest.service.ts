@@ -51,11 +51,36 @@ export class TelemetryIngestService implements OnModuleInit {
       * Pastikan EventEmitterModule di-setup dengan wildcard=true.
       */
    @OnEvent('mqtt.**', { async: true })
-   async handleMqttEvent(payload: { topic: string; data: string }) {
-      const { topic, data } = payload;
+   async handleMqttEvent(
+      payload: { 
+         topic: string; 
+         data: string 
+      } | string, 
+      event?: string
+   ) {
+      // Normalisasi topic dan data
+      let topic: string | undefined;
+      let data: string | undefined;
+
+      if (typeof payload === 'object' && payload !== null) {
+         topic = payload.topic;
+         data = payload.data;
+      }
+
+      if (!topic && typeof event === 'string' && event.startsWith('mqtt')) {
+         topic = event.slice(5);
+      }
+
+      if (!topic || !data) {
+         this.logger.debug('[MQTT] event without topic or data, nonchalant');
+         return;
+      }
+
       // hanya proses topic telemetry
       // format: /psk/incubator/{code}/telemetry
-      if (!topic.startsWith('/psk/incubator/') || !topic.endsWith('/telemetry')) return;
+      if (!topic.startsWith('/psk/incubator')) return;
+      if (topic.endsWith('/ack')) return;
+      if (!topic.endsWith('telemetry')) return;
 
       const seg = topic.split('/'); // ["", "psk", "incubator", "{code}", "telemetry"]
       const code = seg[3];

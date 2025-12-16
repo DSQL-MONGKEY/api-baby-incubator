@@ -5,7 +5,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: true });
+  const nodeEnv = process.env.NODE_ENV ? 'development' : 'production';
+  const port = Number(nodeEnv ? 3000 : process.env.PORT);
 
   app.setGlobalPrefix("api");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
@@ -19,6 +21,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(port, '0.0.0.0');
+
 }
 bootstrap();

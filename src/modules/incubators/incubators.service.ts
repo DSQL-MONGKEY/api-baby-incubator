@@ -18,7 +18,7 @@ export class IncubatorsService {
     type: 'control-mode' | 'fan' | 'lamp' | 'sensor-param',
     cmdTopic: string,
     payload: Record<string, any>,
-    timeoutMs = 5000,
+    timeoutMs = 10000,
   ) {
     const correlationId = randomUUID();
     const ackTopic = `/psk/incubator/${code}/ack`;
@@ -78,7 +78,7 @@ export class IncubatorsService {
       throw new BadRequestException('Incubator code length must be more than 1 character');
     }
 
-    return this.db.incubator.create({
+    const newInc = await this.db.incubator.create({
       data: {
         code: dto.incubatorCode,
         name: dto.name,
@@ -89,6 +89,19 @@ export class IncubatorsService {
         last_seen_at:  new Date()
       }
     });
+
+    await this.db.sensor_parameters.create({
+      data: {
+        incubator_id: newInc.id,
+        temp_on_c: 36.7,
+        rh_on_percent: 60,
+        temp_off_c: 36.0,
+        rh_off_percent: 50,
+        ema_alpha: 0.2
+      }
+    });
+
+    return newInc;
   }
 
   async getById(id: string) {
@@ -121,7 +134,7 @@ export class IncubatorsService {
       }
     });
 
-    return this.db.state.update({
+    const state = await this.db.state.update({
       where: { incubator_id: id },
       data: { mode, 
         rev: {
@@ -129,7 +142,12 @@ export class IncubatorsService {
         },
         updated_at: new Date()
       },
-    })
+    });
+
+    return {
+      ...state,
+      rev: Number(state.rev)
+    }
   }
 
   async setFanManual(id: string, fan: number[]) {

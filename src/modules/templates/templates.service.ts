@@ -123,7 +123,7 @@ export class TemplatesService {
       await this.mqtt.publish(`${topicBase}/control-mode`, { mode: 'MANUAL' }, { qos: 1, retain: true });
     }
 
-    // 2) Update DB snapshot (ini juga menjaga konsistensi API state)
+    // 2) Update DB snapshot (menjaga konsistensi API state)
     await this.incubators.setFanManual(incubatorId, tpl.fan);
     // lamp device adalah grup (CH7+CH8), decide ON jika salah satu =1
     const lampOn = (tpl.lamp?.[0] ?? 0) || (tpl.lamp?.[1] ?? 0) ? 1 : 0;

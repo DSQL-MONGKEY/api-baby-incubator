@@ -11,7 +11,7 @@ export const incubatorSeeder: Seeder = {
          where: { code: 'INC-A-001' },
          update: { status: 'ONLINE', mode: 'AUTO', last_seen_at: new Date() },
          create: {
-            code: 'INC-A-001',
+            code: '001',
             name: 'Incubator A',
             status: 'ONLINE',
             mode: 'AUTO',

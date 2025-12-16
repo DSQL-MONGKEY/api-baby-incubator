@@ -52,6 +52,31 @@ function toTelemetryDTO(row: any): TelemetryDTO {
 export class TelemetryService {
   constructor(private readonly db: PrismaService) {}
 
+  jsonSafe(value: any): any {
+    if (value === null || value === undefined) return value;
+
+    // ✅ BigInt -> number (kalau aman) atau string
+    if (typeof value === 'bigint') {
+      const n = Number(value);
+      return Number.isSafeInteger(n) ? n : value.toString();
+    }
+
+    if (Array.isArray(value)) return value.map(this.jsonSafe);
+
+    if (typeof value === 'object') {
+      // Prisma Decimal biasanya punya toNumber()
+      if (typeof (value as any).toNumber === 'function') {
+        return (value as any).toNumber();
+      }
+
+      const out: Record<string, any> = {};
+      for (const [k, v] of Object.entries(value)) out[k] = this.jsonSafe(v);
+      return out;
+    }
+
+    return value;
+  }
+
   async latest(incubatorId: string) {
     const inc = await this.db.incubator.findUnique({ where: { id: incubatorId } });
     if (!inc) throw new NotFoundException('incubator not found');
@@ -59,7 +84,6 @@ export class TelemetryService {
     const row = await this.db.telemetry.findFirst({
       where: { incubator_id: incubatorId },
       orderBy: { ts: 'desc' },
-      // pilih field yang kita butuhkan saja
       select: {
         id: true,
         ts: true,
@@ -73,53 +97,48 @@ export class TelemetryService {
         gpsLat: true,
         gpsLon: true,
         fwVersion: true,
-        rev: true, // BIGINT -> kita map jadi string
+        rev: true,
       },
     });
 
-    return row ? toTelemetryDTO(row) : null;
-  }
+    if (!row) return null;
 
-  async listRaw(
-    incubatorId: string,
-    q: { from?: string; to?: string; limit?: number; order?: 'asc' | 'desc' },
-  ) {
-    const inc = await this.db.incubator.findUnique({ where: { id: incubatorId } });
-    if (!inc) throw new NotFoundException('incubator not found');
-
-    const from = parseDate(q.from);
-    const to = parseDate(q.to);
-    const where: Prisma.telemetryWhereInput = {
-      incubator_id: incubatorId,
-      ...(from || to ? { ts: { gte: from, lte: to } } : {}),
+    const normalized = {
+      ...row,
+      rev: row.rev != null ? Number(row.rev) : null,
     };
 
-    const orderBy = { ts: (q.order ?? 'desc') as 'asc' | 'desc' };
-    const take = q.limit && q.limit > 0 ? q.limit : 500;
-
-    const rows = await this.db.telemetry.findMany({
-      where,
-      orderBy,
-      take,
-      select: {
-        id: true,
-        ts: true,
-        temp_main: true,
-        room_humid: true,
-        fan: true,
-        lamp: true,
-        mode: true,
-        gpsFix: true,
-        gpsSat: true,
-        gpsLat: true,
-        gpsLon: true,
-        fwVersion: true,
-        rev: true, // BIGINT
-      },
-    });
-
-    return rows.map(toTelemetryDTO);
+    return this.jsonSafe(normalized);
   }
+
+  async listRaw(incubatorId: string, q: { from?: string; to?: string; limit?: number; order?: 'asc' | 'desc' }) {
+  const inc = await this.db.incubator.findUnique({ where: { id: incubatorId } });
+  if (!inc) throw new NotFoundException('incubator not found');
+
+  const from = parseDate(q.from);
+  const to = parseDate(q.to);
+
+  const where: Prisma.telemetryWhereInput = {
+    incubator_id: incubatorId,
+    ...(from || to ? { ts: { gte: from, lte: to } } : {}),
+  };
+
+  const orderBy = { ts: (q.order ?? 'desc') as 'asc' | 'desc' };
+  const take = q.limit && q.limit > 0 ? q.limit : 500;
+
+  const rows = await this.db.telemetry.findMany({
+    where, orderBy, take,
+    select: {
+      id: true, ts: true,
+      temp_main: true, room_humid: true,
+      fan: true, lamp: true, mode: true,
+      gpsFix: true, gpsSat: true, gpsLat: true, gpsLon: true,
+      fwVersion: true, rev: true,
+    },
+  });
+
+  return rows.map((r) => ({ ...r, rev: r.rev != null ? Number(r.rev) : null }));
+}
 
   /**
    * Downsample series untuk chart: bucketSec detik, avg(temp_main, room_humid)
